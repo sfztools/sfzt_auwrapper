@@ -2,8 +2,8 @@
 // Project     : VST SDK
 //
 // Category    : Helpers
-// Filename    : public.sdk/source/vst/auwrapper/aucarbonview.h
-// Created by  : Steinberg, 12/2007
+// Filename    : public.sdk/source/vst/auwrapper/docAUv2.h
+// Created by  : Steinberg, 07/2017
 // Description : VST 3 -> AU Wrapper
 //
 //-----------------------------------------------------------------------------
@@ -34,50 +34,41 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //-----------------------------------------------------------------------------
 
-/// \cond ignore
+/**
 
-#pragma once
+*******************************************
+\page AUWrapper VST 3 - AudioUnit Wrapper
+*******************************************
 
-#if !__LP64__
+Helper Class wrapping a VST 3 Plug-in to a Audio Unit v2 Plug-in
 
-#include "AUPublic/AUCarbonViewBase/AUCarbonViewBase.h"
-#include "pluginterfaces/vst/ivsteditcontroller.h"
-#include "base/source/fobject.h"
-#include "pluginterfaces/gui/iplugview.h"
+***************************
+\section AUIntroduction Introduction
+***************************
+The VST 3 SDK comes with an AudioUnit wrapper, which can wrap one VST 3 Audio Processor and Edit Controller as an AudioUnit effect/instrument.
 
-namespace Steinberg {
-namespace Vst {
-class AUCarbonPlugFrame;
+The wrapper is a small dynamic library which loads the VST 3 Plug-in.
+As AudioUnits store some important information in their resource fork, this library must be compiled for every VST 3 Plug-in.
+\n\n
 
-//------------------------------------------------------------------------
-class AUCarbonView : public AUCarbonViewBase, public IPlugFrame, public FObject
-{
-public:
-	AUCarbonView (AudioUnitCarbonView auv);
-	~AUCarbonView ();
+***************************
+\section AUhowdoesitwork How does it work?
+***************************
+- build the auwrapper project (public.sdk/source/vst/auwrapper/auwrapper.xcodeproj)
+- create a copy of the again AU wrapper example project directory (public.sdk/source/vst/auwrapper/again/)
+- rename the copy to your needs
+- edit the target settings of the project and change
+	- Product Name
+	- Library search path so that it points to the directory where libauwrapper.a exists
+	- architecture setting so that it only includes architectures the VST 3 Plug-in supports
 
-	OSStatus CreateUI (Float32 xoffset, Float32 yoffset) override;
+- search in the project for AUWRAPPER_CHANGE and change the settings to your needs, especially in :
+	- edit audiounitconfig.h see comments there
+	- edit Info.plist see comments there
+- edit the "Make Links Script" for easier debugging/development
+- build your project
+- done... that is all!
 
-	OBJ_METHODS(AUCarbonView, FObject)
-	DEF_INTERFACES_1(IPlugFrame, FObject)
-	REFCOUNT_METHODS(FObject)
+For the release version, you must place a copy or an alias of your VST 3 Plug-in in the resource folder of the bundle named "plugin.vst3"
 
-protected:
-	tresult PLUGIN_API resizeView (IPlugView* view, ViewRect* vr) SMTG_OVERRIDE;
-
-	static OSStatus HIViewAdded (EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void* inUserData);
-
-	IEditController* editController;
-	AUCarbonPlugFrame* plugFrame;
-	IPlugView* plugView;
-	HIViewRef hiPlugView;
-	EventHandlerRef eventHandler;
-};
-
-//------------------------------------------------------------------------
-} // namespace Vst
-} // namespace Steinberg
-
-#endif // !__LP64__
-
-/// \endcond
+*/
