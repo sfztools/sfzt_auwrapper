@@ -48,9 +48,9 @@ Things to do :
 #include "auwrapper.h"
 #include "NSDataIBStream.h"
 #include "aucocoaview.h"
-#include "base/source/fdynlib.h"
 #include "base/source/fstring.h"
 #include "pluginterfaces/base/ustring.h"
+#include "pluginterfaces/base/ipluginbase.h"
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "pluginterfaces/vst/vstpresetkeys.h"
@@ -77,8 +77,10 @@ Things to do :
 #define SMTG_MAKE_STRING_PRIVATE_DONT_USE(x) #x
 #define SMTG_MAKE_STRING(x) SMTG_MAKE_STRING_PRIVATE_DONT_USE (x)
 
-typedef bool (*bundleEntryPtr) (CFBundleRef);
-typedef bool (*bundleExitPtr) (void);
+extern "C" {
+SMTG_EXPORT_SYMBOL bool bundleEntry (CFBundleRef);
+SMTG_EXPORT_SYMBOL bool bundleExit (void);
+}
 
 #include <dlfcn.h>
 
@@ -104,84 +106,34 @@ static bool CopyProcessPath (Steinberg::String& name)
 
 namespace Steinberg {
 
+extern "C" {
+SMTG_EXPORT_SYMBOL IPluginFactory* PLUGIN_API GetPluginFactory ();
+}
+
 //------------------------------------------------------------------------
-class VST3DynLibrary : public FDynLibrary
+class VST3DynLibrary : public FObject
 {
 public:
 	VST3DynLibrary () : bundleEntryCalled (false) { gInstance = this; }
 
 	~VST3DynLibrary ()
 	{
-		if (isLoaded ())
+		if (bundleEntryCalled)
 		{
-			if (bundleEntryCalled)
-			{
-				if (bundleExitPtr bundleExit = (bundleExitPtr)getProcAddress ("bundleExit"))
-					bundleExit ();
-			}
-
-#if defined(MAC_OS_X_VERSION_10_11)
-			// workaround, because CFBundleCreate returns refcount == 2.
-			if (CFBundleIsExecutableLoaded ((CFBundleRef)instance))
-			{
-				CFBundleUnloadExecutable ((CFBundleRef)instance);
-				CFRelease ((CFBundleRef)instance);
-			}
-#else
-			CFRelease ((CFBundleRef)instance);
-#endif
-			instance = 0;
-			isloaded = false;
+			bundleExit ();
 		}
+
 		gInstance = 0;
 	}
 
-	bool init (const tchar* path)
+	bool init (CFBundleRef bundle)
 	{
-		if (isLoaded ())
-			return true;
-
-		isBundle = false;
-
-		Steinberg::String name (path);
-
-		if (name.getChar16 (0) != STR ('/')) // no absoltue path
+		if (!bundleEntryCalled)
 		{
-			Steinberg::String p;
-			if (CopyProcessPath (p))
-			{
-				Steinberg::int32 index = p.findLast (STR ('/'));
-				p.remove (index + 1);
-				name = p + name;
-			}
+			bundleEntryCalled = bundleEntry (bundle);
 		}
 
-		CFStringRef fsString = (CFStringRef)name.toCFStringRef ();
-		CFURLRef url = CFURLCreateWithFileSystemPath (NULL, fsString, kCFURLPOSIXPathStyle, true);
-		if (url)
-		{
-			CFBundleRef bundle = CFBundleCreate (NULL, url);
-			if (bundle)
-			{
-				bundleEntryPtr bundleEntry = (bundleEntryPtr)CFBundleGetFunctionPointerForName (
-				    bundle, CFSTR ("bundleEntry"));
-				if (bundleEntry)
-					bundleEntryCalled = bundleEntry (bundle);
-
-				if (bundleEntryCalled)
-				{
-					isBundle = true;
-					isloaded = true;
-					instance = (void*)bundle;
-				}
-				else
-					CFRelease (bundle);
-			}
-			CFRelease (url);
-		}
-		CFRelease (fsString);
-
-		return isLoaded ();
+		return bundleEntryCalled;
 	}
 
 	static VST3DynLibrary* gInstance;
@@ -646,46 +598,8 @@ void AUWrapper::loadVST3Module ()
 	{
 		if (gBundleRef)
 		{
-			String pluginPath;
-			CFStringRef pluginNameStr = (CFStringRef)CFBundleGetValueForInfoDictionaryKey (
-			    gBundleRef, CFSTR ("VST3 Plug-in"));
-			if (!pluginNameStr)
-			{
-				NSURL* pluginUrl = (NSURL*)CFBundleCopyResourceURL (gBundleRef, CFSTR ("plugin"),
-				                                                    CFSTR ("vst3"), NULL);
-				if (!pluginUrl)
-				{
-					NSLog (
-					    @"VST3 Plug-in not defined in Info Dictionary and not included in bundle");
-					return;
-				}
-				pluginPath.fromCFStringRef ((CFStringRef)[pluginUrl path]);
-				[pluginUrl release];
-			}
-			else
-			{
-				pluginPath.fromCFStringRef (pluginNameStr);
-				if (!pluginPath.getChar (0) != STR ('/'))
-				{
-					FSRef fsRef;
-					if (FSFindFolder (kLocalDomain, kAudioPlugInsFolderType, false, &fsRef) ==
-					    noErr)
-					{
-						NSURL* url = (NSURL*)CFURLCreateFromFSRef (0, &fsRef);
-						if (url)
-						{
-							String basePath ([[url path] UTF8String]);
-							basePath.toWideString (kCP_Utf8);
-							pluginPath.insertAt (0, STR ("/VST3/"));
-							pluginPath.insertAt (0, basePath);
-							[url release];
-						}
-					}
-				}
-			}
-
 			new VST3DynLibrary ();
-			if (pluginPath.isEmpty () || !VST3DynLibrary::gInstance->init (pluginPath))
+			if (!VST3DynLibrary::gInstance->init (gBundleRef))
 			{
 				VST3DynLibrary::gInstance->release ();
 				return;
@@ -710,10 +624,7 @@ IPluginFactory* AUWrapper::getFactory ()
 {
 	if (VST3DynLibrary::gInstance)
 	{
-		GetFactoryProc getPlugFactory =
-		    (GetFactoryProc)VST3DynLibrary::gInstance->getProcAddress ("GetPluginFactory");
-		if (getPlugFactory)
-			return getPlugFactory ();
+		return GetPluginFactory ();
 	}
 	return 0;
 }
