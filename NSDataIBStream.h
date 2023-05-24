@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2020, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2023, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -68,7 +68,7 @@ public:
 protected:
 	NSData* data;
 	int64 currentPos;
-	HostAttributeList attrList;
+	IPtr<IAttributeList> attrList;
 	bool hideAttributes;
 };
 
