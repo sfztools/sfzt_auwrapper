@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2022, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2020, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -38,15 +38,31 @@
 
 #pragma once
 
-#ifndef SMTG_AUCocoaUIBase_CLASS_NAME
 #import "aucocoaclassprefix.h"
-#endif
 
-#import <Foundation/Foundation.h>
+#import <Cocoa/Cocoa.h>
 #import <AudioUnit/AUCocoaUIView.h>
 
-//------------------------------------------------------------------------
-@interface SMTG_AUCocoaUIBase_CLASS_NAME : NSObject<AUCocoaUIBase>
+#ifndef SMTG_AU_NAMESPACE
+# error define SMTG_AU_NAMESPACE
+#endif
+
+//-----------------------------------------------------------------------------
+#define SMTG_AU_PLUGIN_NAMESPACE0(x) x
+#define SMTG_AU_PLUGIN_NAMESPACE1(a, b) a##_##b
+#define SMTG_AU_PLUGIN_NAMESPACE2(a, b) SMTG_AU_PLUGIN_NAMESPACE1(a,b)
+#define SMTG_AU_PLUGIN_NAMESPACE(name) SMTG_AU_PLUGIN_NAMESPACE2(SMTG_AU_PLUGIN_NAMESPACE0(name), SMTG_AU_PLUGIN_NAMESPACE0(SMTG_AU_NAMESPACE))
+
+//-----------------------------------------------------------------------------
+// SMTG_AU_PLUGIN_NAMESPACE (SMTGAUPluginCocoaView)
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+@interface SMTG_AU_PLUGIN_NAMESPACE (SMTGAUPluginCocoaView) : NSObject <AUCocoaUIBase>
+{
+}
+
+//-----------------------------------------------------------------------------
 @end
 
 /// \endcond

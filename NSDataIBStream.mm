@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2022, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2020, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -58,8 +58,6 @@ NSDataIBStream::NSDataIBStream (NSData* data, bool hideAttributes)
 , hideAttributes (hideAttributes)
 {
 	FUNKNOWN_CTOR
-	if (!hideAttributes)
-		attrList = HostAttributeList::make ();
 #if !ARC_ENABLED
 	[data retain];
 #endif
@@ -171,7 +169,7 @@ tresult PLUGIN_API NSDataIBStream::getFileName (String128 name)
 //------------------------------------------------------------------------
 IAttributeList* PLUGIN_API NSDataIBStream::getAttributes ()
 {
-	return attrList;
+	return hideAttributes ? 0 : &attrList;
 }
 
 //------------------------------------------------------------------------
